@@ -1,0 +1,113 @@
+{
+  "info": {
+    "name": "Flashcard API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "Create Deck",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('deck created', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.environment.set('deck_id', body.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman Deck {{$timestamp}}\",\n  \"description\": \"Postman ile olusturulan deck\"\n}"
+        },
+        "url": "{{base_url}}/api/decks"
+      }
+    },
+    {
+      "name": "List Decks",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/decks"
+      }
+    },
+    {
+      "name": "Get Deck",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/decks/{{deck_id}}"
+      }
+    },
+    {
+      "name": "Create Flashcard",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('flashcard created', function () { pm.response.to.have.status(201); });",
+              "const body = pm.response.json();",
+              "pm.environment.set('flashcard_id', body.data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"front\": \"Flask nedir?\",\n  \"back\": \"Python web framework\"\n}"
+        },
+        "url": "{{base_url}}/api/decks/{{deck_id}}/flashcards"
+      }
+    },
+    {
+      "name": "Review Flashcard",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"difficulty\": \"good\"\n}"
+        },
+        "url": "{{base_url}}/api/flashcards/{{flashcard_id}}/review"
+      }
+    },
+    {
+      "name": "Delete Flashcard",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/api/flashcards/{{flashcard_id}}"
+      }
+    }
+  ]
+}
