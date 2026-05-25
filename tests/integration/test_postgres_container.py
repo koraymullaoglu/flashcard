@@ -14,7 +14,13 @@ from extensions import db
 )
 def test_create_deck_with_real_postgresql_container() -> None:
     with PostgresContainer("postgres:16-alpine") as postgres:
-        app = create_app(TESTING=True, SQLALCHEMY_DATABASE_URI=postgres.get_connection_url())
+        database_url = postgres.get_connection_url().replace(
+            "postgresql+psycopg2://",
+            "postgresql+psycopg://",
+            1,
+        )
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        app = create_app(TESTING=True, SQLALCHEMY_DATABASE_URI=database_url)
 
         with app.app_context():
             db.create_all()

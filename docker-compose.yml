@@ -1,4 +1,18 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql+psycopg://flashcard:flashcard@postgres:5432/flashcard
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "flask --app app init-db && flask --app app run --host=0.0.0.0 --port=5000"
+
   postgres:
     image: postgres:16-alpine
     environment:
