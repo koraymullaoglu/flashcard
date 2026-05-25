@@ -67,3 +67,20 @@ def test_invalid_flashcard_payload_returns_422(client: FlaskClient) -> None:
     response = client.post(f"/api/decks/{deck.id}/flashcards", json={"front": "", "back": "Cevap"})
 
     assert response.status_code == 422
+
+
+@pytest.mark.integration
+def test_metrics_endpoint_returns_prometheus_metrics(client: FlaskClient) -> None:
+    client.get("/health")
+    client.get("/missing")
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.content_type.startswith("text/plain")
+
+    body = response.get_data(as_text=True)
+    assert "# TYPE flask_http_request_total counter" in body
+    assert "# TYPE flask_http_request_duration_seconds histogram" in body
+    assert 'flask_http_request_total{method="GET",status="200"}' in body
+    assert 'flask_http_request_total{method="GET",status="404"}' in body

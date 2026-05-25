@@ -1,6 +1,8 @@
 from time import sleep
 
 from flask import Flask
+from prometheus_client import CollectorRegistry
+from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy.exc import OperationalError
 
 from config import Config
@@ -20,6 +22,8 @@ def create_app(config_object: type[Config] | None = None, **config_overrides: ob
     db.init_app(app)
     app.register_blueprint(deck_bp)
     app.register_blueprint(view_bp)
+
+    PrometheusMetrics(app, registry=CollectorRegistry(auto_describe=True))
 
     @app.get("/health")
     def health() -> tuple[dict[str, str], int]:
