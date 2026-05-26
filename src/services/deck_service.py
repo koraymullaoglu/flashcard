@@ -17,33 +17,40 @@ class DeckService:
         self.deck_repository = deck_repository
         self.flashcard_repository = flashcard_repository
 
-    def list_decks(self) -> list[Deck]:
-        return self.deck_repository.list()
+    def list_decks(self, user_id: int) -> list[Deck]:
+        return self.deck_repository.list(user_id)
 
-    def get_deck(self, deck_id: int) -> Deck:
+    def _get_owned_deck(self, deck_id: int, user_id: int) -> Deck:
         deck = self.deck_repository.get(deck_id)
         if deck is None:
             raise NotFoundError("Deck bulunamadi.")
+        if deck.user_id != user_id:
+            raise NotFoundError("Deck bulunamadi.")
         return deck
 
-    def create_deck(self, payload: dict[str, object]) -> Deck:
+    def get_deck(self, deck_id: int, user_id: int) -> Deck:
+        return self._get_owned_deck(deck_id, user_id)
+
+    def create_deck(self, payload: dict[str, object], user_id: int) -> Deck:
         name = self._required_string(payload, "name", max_length=120)
         description = self._optional_string(payload, "description", max_length=255)
 
-        if self.deck_repository.get_by_name(name):
+        if self.deck_repository.get_by_name(name, user_id):
             raise ConflictError("Bu isimde bir deck zaten var.")
 
-        return self.deck_repository.create(name=name, description=description)
+        return self.deck_repository.create(name=name, user_id=user_id, description=description)
 
-    def add_flashcard(self, deck_id: int, payload: dict[str, object]) -> Flashcard:
-        self.get_deck(deck_id)
+    def add_flashcard(self, deck_id: int, payload: dict[str, object], user_id: int) -> Flashcard:
+        self._get_owned_deck(deck_id, user_id)
         front = self._required_string(payload, "front", max_length=500)
         back = self._required_string(payload, "back", max_length=500)
         return self.flashcard_repository.create(deck_id=deck_id, front=front, back=back)
 
-    def review_flashcard(self, flashcard_id: int, payload: dict[str, object]) -> Flashcard:
+    def review_flashcard(
+        self, flashcard_id: int, payload: dict[str, object], user_id: int
+    ) -> Flashcard:
         flashcard = self.flashcard_repository.get(flashcard_id)
-        if flashcard is None:
+        if flashcard is None or flashcard.deck.user_id != user_id:
             raise NotFoundError("Flashcard bulunamadi.")
 
         difficulty = self._required_string(payload, "difficulty", max_length=20)
@@ -56,9 +63,9 @@ class DeckService:
         flashcard.last_reviewed_at = datetime.now(timezone.utc)
         return self.flashcard_repository.save(flashcard)
 
-    def delete_flashcard(self, flashcard_id: int) -> None:
+    def delete_flashcard(self, flashcard_id: int, user_id: int) -> None:
         flashcard = self.flashcard_repository.get(flashcard_id)
-        if flashcard is None:
+        if flashcard is None or flashcard.deck.user_id != user_id:
             raise NotFoundError("Flashcard bulunamadi.")
         self.flashcard_repository.delete(flashcard)
 

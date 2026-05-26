@@ -3,9 +3,172 @@
     "name": "Flashcard API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "let token = pm.environment.get('token');",
+          "if (token) {",
+          "  pm.request.headers.add({ key: 'Authorization', value: 'Bearer ' + token });",
+          "}"
+        ]
+      }
+    }
+  ],
   "item": [
     {
+      "name": "Register",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('username', 'pm-' + Date.now());",
+              "pm.environment.set('password', 'pm-pass');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('latency < 500ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['id', 'username'],",
+              "      properties: {",
+              "        id: { type: 'number' },",
+              "        username: { type: 'string' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/register"
+      }
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('username')) {",
+              "  pm.environment.set('username', 'pm-' + Date.now());",
+              "  pm.environment.set('password', 'pm-pass');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('latency < 500ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['token'],",
+              "      properties: {",
+              "        token: { type: 'string' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});",
+              "",
+              "pm.environment.set('token', pm.response.json().data.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/login"
+      }
+    },
+    {
       "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('latency < 200ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(200);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['status'],",
+              "  properties: {",
+              "    status: { type: 'string' }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "GET",
         "url": "{{base_url}}/health"
@@ -19,9 +182,36 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('deck created', function () { pm.response.to.have.status(201); });",
-              "const body = pm.response.json();",
-              "pm.environment.set('deck_id', body.data.id);"
+              "pm.test('status 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('latency < 500ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['id', 'name', 'flashcards'],",
+              "      properties: {",
+              "        id: { type: 'number' },",
+              "        name: { type: 'string' },",
+              "        description: { type: ['string', 'null'] },",
+              "        flashcards: { type: 'array' },",
+              "        created_at: { type: 'string' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});",
+              "",
+              "pm.environment.set('deck_id', pm.response.json().data.id);"
             ]
           }
         }
@@ -29,10 +219,7 @@
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
@@ -43,6 +230,34 @@
     },
     {
       "name": "List Decks",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('latency < 300ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(300);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: { type: 'array' }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "GET",
         "url": "{{base_url}}/api/decks"
@@ -50,6 +265,44 @@
     },
     {
       "name": "Get Deck",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('latency < 300ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(300);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['id', 'name', 'flashcards'],",
+              "      properties: {",
+              "        id: { type: 'number' },",
+              "        name: { type: 'string' },",
+              "        description: { type: ['string', 'null'] },",
+              "        flashcards: { type: 'array' },",
+              "        created_at: { type: 'string' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "GET",
         "url": "{{base_url}}/api/decks/{{deck_id}}"
@@ -63,9 +316,36 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('flashcard created', function () { pm.response.to.have.status(201); });",
-              "const body = pm.response.json();",
-              "pm.environment.set('flashcard_id', body.data.id);"
+              "pm.test('status 201', function () {",
+              "  pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('latency < 500ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['id', 'front', 'back'],",
+              "      properties: {",
+              "        id: { type: 'number' },",
+              "        front: { type: 'string' },",
+              "        back: { type: 'string' },",
+              "        difficulty: { type: 'string' },",
+              "        review_count: { type: 'number' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});",
+              "",
+              "pm.environment.set('flashcard_id', pm.response.json().data.id);"
             ]
           }
         }
@@ -73,10 +353,7 @@
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
@@ -87,13 +364,48 @@
     },
     {
       "name": "Review Flashcard",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('latency < 500ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['id', 'difficulty'],",
+              "      properties: {",
+              "        id: { type: 'number' },",
+              "        front: { type: 'string' },",
+              "        back: { type: 'string' },",
+              "        difficulty: { type: 'string' },",
+              "        review_count: { type: 'number' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "PATCH",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
@@ -104,6 +416,40 @@
     },
     {
       "name": "Delete Flashcard",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('latency < 500ms', function () {",
+              "  pm.expect(pm.response.responseTime).to.be.below(500);",
+              "});",
+              "",
+              "let schema = {",
+              "  type: 'object',",
+              "  required: ['data'],",
+              "  properties: {",
+              "    data: {",
+              "      type: 'object',",
+              "      required: ['deleted'],",
+              "      properties: {",
+              "        deleted: { type: 'boolean' }",
+              "      }",
+              "    }",
+              "  }",
+              "};",
+              "pm.test('schema valid', function () {",
+              "  pm.expect(tv4.validate(pm.response.json(), schema)).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "DELETE",
         "url": "{{base_url}}/api/flashcards/{{flashcard_id}}"

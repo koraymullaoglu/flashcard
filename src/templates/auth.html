@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Giriş — Flashcard{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+
+    <div class="text-center mb-8">
+        <h1 class="text-2xl font-bold tracking-tight text-white" data-testid="auth-title">Hesabınız</h1>
+        <p class="text-sm text-zinc-500 mt-1">Devam etmek için giriş yapın ya da yeni hesap oluşturun.</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 p-1 rounded-lg bg-zinc-900 border border-zinc-800" data-testid="auth-tabs">
+        <button id="tab-login" data-testid="tab-login"
+            class="flex-1 py-2 text-sm font-medium rounded-md bg-violet-600 text-white transition-colors"
+            onclick="switchTab('login')">
+            Giriş Yap
+        </button>
+        <button id="tab-register" data-testid="tab-register"
+            class="flex-1 py-2 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-200 transition-colors"
+            onclick="switchTab('register')">
+            Kayıt Ol
+        </button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="form-login" data-testid="form-login" class="space-y-4" onsubmit="handleLogin(event)">
+        <div>
+            <label for="login-username" class="block text-sm font-medium text-zinc-300 mb-1.5">Kullanıcı Adı</label>
+            <input id="login-username" data-testid="login-username" type="text" required
+                autocomplete="username"
+                class="w-full rounded-lg bg-zinc-800/50 border border-zinc-700 px-3 py-2 text-sm text-zinc-100
+                       placeholder:text-zinc-600
+                       focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-colors">
+        </div>
+        <div>
+            <label for="login-password" class="block text-sm font-medium text-zinc-300 mb-1.5">Şifre</label>
+            <input id="login-password" data-testid="login-password" type="password" required
+                autocomplete="current-password"
+                class="w-full rounded-lg bg-zinc-800/50 border border-zinc-700 px-3 py-2 text-sm text-zinc-100
+                       placeholder:text-zinc-600
+                       focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-colors">
+        </div>
+        <div id="login-error" data-testid="login-error" class="hidden text-sm text-red-400"></div>
+        <button type="submit" id="btn-login-submit" data-testid="btn-login-submit"
+            class="w-full py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-500 transition-colors
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-950">
+            Giriş Yap
+        </button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="form-register" data-testid="form-register" class="hidden space-y-4" onsubmit="handleRegister(event)">
+        <div>
+            <label for="register-username" class="block text-sm font-medium text-zinc-300 mb-1.5">Kullanıcı Adı</label>
+            <input id="register-username" data-testid="register-username" type="text" required maxlength="80"
+                autocomplete="username"
+                class="w-full rounded-lg bg-zinc-800/50 border border-zinc-700 px-3 py-2 text-sm text-zinc-100
+                       placeholder:text-zinc-600
+                       focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-colors">
+        </div>
+        <div>
+            <label for="register-password" class="block text-sm font-medium text-zinc-300 mb-1.5">Şifre</label>
+            <input id="register-password" data-testid="register-password" type="password" required
+                autocomplete="new-password"
+                class="w-full rounded-lg bg-zinc-800/50 border border-zinc-700 px-3 py-2 text-sm text-zinc-100
+                       placeholder:text-zinc-600
+                       focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500 transition-colors">
+        </div>
+        <div id="register-error" data-testid="register-error" class="hidden text-sm text-red-400"></div>
+        <button type="submit" id="btn-register-submit" data-testid="btn-register-submit"
+            class="w-full py-2 text-sm font-medium rounded-lg bg-violet-600 text-white hover:bg-violet-500 transition-colors
+                   disabled:opacity-50 disabled:cursor-not-allowed
+                   focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 focus:ring-offset-zinc-950">
+            Kayıt Ol
+        </button>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let activeTab = 'login';
+
+    function switchTab(tab) {
+        activeTab = tab;
+        const $tabL = document.getElementById('tab-login');
+        const $tabR = document.getElementById('tab-register');
+        const $formL = document.getElementById('form-login');
+        const $formR = document.getElementById('form-register');
+
+        if (tab === 'login') {
+            $tabL.className = 'flex-1 py-2 text-sm font-medium rounded-md bg-violet-600 text-white transition-colors';
+            $tabR.className = 'flex-1 py-2 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-200 transition-colors';
+            $formL.classList.remove('hidden');
+            $formR.classList.add('hidden');
+        } else {
+            $tabR.className = 'flex-1 py-2 text-sm font-medium rounded-md bg-violet-600 text-white transition-colors';
+            $tabL.className = 'flex-1 py-2 text-sm font-medium rounded-md text-zinc-400 hover:text-zinc-200 transition-colors';
+            $formR.classList.remove('hidden');
+            $formL.classList.add('hidden');
+        }
+
+        document.getElementById('login-error').classList.add('hidden');
+        document.getElementById('register-error').classList.add('hidden');
+    }
+
+    async function handleLogin(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-login-submit');
+        const $err = document.getElementById('login-error');
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        btn.disabled = true;
+        $err.classList.add('hidden');
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error?.message || 'Giriş başarısız.');
+
+            setToken(data.data.token);
+            window.location = '/';
+        } catch (err) {
+            $err.textContent = err.message;
+            $err.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-register-submit');
+        const $err = document.getElementById('register-error');
+        const username = document.getElementById('register-username').value.trim();
+        const password = document.getElementById('register-password').value;
+
+        btn.disabled = true;
+        $err.classList.add('hidden');
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data?.error?.message || 'Kayıt başarısız.');
+
+            // Auto-login after register
+            const loginRes = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            const loginData = await loginRes.json();
+            if (!loginRes.ok) throw new Error('Kayıt başarılı ama giriş yapılamadı.');
+
+            setToken(loginData.data.token);
+            window.location = '/';
+        } catch (err) {
+            $err.textContent = err.message;
+            $err.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Redirect if already authenticated
+    if (getToken()) { window.location = '/'; }
+</script>
+{% endblock %}

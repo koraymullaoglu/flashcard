@@ -12,6 +12,7 @@ class DeckFactory(factory.Factory):
 
     name = factory.LazyFunction(lambda: f"{fake.word()}-{fake.uuid4()[:8]}")
     description = factory.LazyFunction(fake.sentence)
+    user_id = 1
 
 
 class FlashcardFactory(factory.Factory):

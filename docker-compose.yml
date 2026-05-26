@@ -6,6 +6,8 @@ services:
     environment:
       FLASK_ENV: production
       DATABASE_URL: postgresql+psycopg://flashcard:flashcard@postgres:5432/flashcard
+      SECRET_KEY: compose-secret-key-change-in-production
+      JWT_SECRET: compose-jwt-secret-at-least-32-bytes-long
     ports:
       - "5000:5000"
     depends_on:

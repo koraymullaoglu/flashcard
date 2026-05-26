@@ -76,6 +76,12 @@ Lint kontrolü:
 uv run ruff check .
 ```
 
+Otomatik düzeltme:
+
+```bash
+uv run ruff check --fix .
+```
+
 ## Postman
 
 Postman içinde şu iki dosyayı import edebilirsin:
@@ -177,12 +183,16 @@ kubectl delete -f k8s/
 | Yol | Açıklama |
 |-----|----------|
 | `GET /health` | Sağlık kontrolü |
+| `POST /api/auth/register` | Kullanıcı kaydı |
+| `POST /api/auth/login` | Giriş (JWT token döner) |
 | `POST /api/decks` | Yeni deste oluştur |
 | `GET /api/decks` | Tüm desteleri listele |
 | `GET /api/decks/<deck_id>` | Deste detayı (kartlarla birlikte) |
 | `POST /api/decks/<deck_id>/flashcards` | Desteye kart ekle |
 | `PATCH /api/flashcards/<flashcard_id>/review` | Kartı değerlendir |
 | `DELETE /api/flashcards/<flashcard_id>` | Kartı sil |
+
+Tüm `/api/*` endpoint'leri (health hariç) `Authorization: Bearer <token>` header'ı gerektirir. |
 
 ## Frontend
 
@@ -243,18 +253,23 @@ src/
 ├── app.py                          # Flask uygulama fabrikası
 ├── config.py                       # Konfigürasyon
 ├── extensions.py                   # SQLAlchemy instance
-├── models.py                       # Deck ve Flashcard modelleri
+├── models.py                       # User, Deck ve Flashcard modelleri
+├── middleware/
+│   └── auth.py                     # JWT auth decorator (require_auth)
 ├── controllers/
+│   ├── auth_controller.py          # /api/auth/* endpointleri
 │   ├── deck_controller.py          # /api/* JSON endpointleri
 │   └── view_controller.py          # / ve /decks/<id> sayfa endpointleri
 ├── services/
-│   ├── deck_service.py             # İş mantığı
+│   ├── auth_service.py             # Kullanıcı kayıt/giriş iş mantığı
+│   ├── deck_service.py             # Deste/kart iş mantığı
 │   └── errors.py                   # Servis hataları
 ├── repositories/
 │   ├── deck_repository.py          # Deck veritabanı işlemleri
 │   └── flashcard_repository.py     # Flashcard veritabanı işlemleri
 └── templates/
-    ├── base.html                   # Ortak layout
+    ├── base.html                   # Ortak layout + navbar auth kontrolleri
+    ├── auth.html                   # Giriş / kayıt sayfası
     ├── index.html                  # Deste listesi
     └── deck_detail.html            # Deste detay ve çalışma modu
 ```

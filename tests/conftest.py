@@ -15,6 +15,7 @@ def app() -> Iterator[Flask]:
     app = create_app(
         TESTING=True,
         SQLALCHEMY_DATABASE_URI=database_url,
+        JWT_SECRET="test-jwt-secret-that-is-at-least-32-bytes",
     )
     with app.app_context():
         db.create_all()

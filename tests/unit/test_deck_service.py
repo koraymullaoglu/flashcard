@@ -10,6 +10,7 @@ from services.errors import ConflictError, NotFoundError, ValidationError
 class FakeDeck:
     id: int
     name: str
+    user_id: int
     description: str | None = None
     flashcards: list[object] = field(default_factory=list)
 
@@ -23,23 +24,31 @@ class FakeFlashcard:
     difficulty: str = "new"
     review_count: int = 0
     last_reviewed_at: object = None
+    deck: FakeDeck | None = None
 
 
 class FakeDeckRepository:
     def __init__(self) -> None:
         self.decks: dict[int, FakeDeck] = {}
 
-    def list(self) -> list[FakeDeck]:
-        return list(self.decks.values())
+    def list(self, user_id: int) -> list[FakeDeck]:
+        return [d for d in self.decks.values() if d.user_id == user_id]
 
     def get(self, deck_id: int) -> FakeDeck | None:
         return self.decks.get(deck_id)
 
-    def get_by_name(self, name: str) -> FakeDeck | None:
-        return next((deck for deck in self.decks.values() if deck.name == name), None)
+    def get_by_name(self, name: str, user_id: int) -> FakeDeck | None:
+        return next(
+            (d for d in self.decks.values() if d.name == name and d.user_id == user_id),
+            None,
+        )
 
-    def create(self, name: str, description: str | None = None) -> FakeDeck:
-        deck = FakeDeck(id=len(self.decks) + 1, name=name, description=description)
+    def create(
+        self, name: str, user_id: int, description: str | None = None
+    ) -> FakeDeck:
+        deck = FakeDeck(
+            id=len(self.decks) + 1, name=name, description=description, user_id=user_id
+        )
         self.decks[deck.id] = deck
         return deck
 
@@ -69,6 +78,9 @@ class FakeFlashcardRepository:
         del self.flashcards[flashcard.id]
 
 
+TEST_USER = 1
+
+
 @pytest.fixture()
 def service() -> DeckService:
     deck_repo = FakeDeckRepository()
@@ -78,7 +90,7 @@ def service() -> DeckService:
 
 @pytest.mark.unit
 def test_create_deck_trims_name(service: DeckService) -> None:
-    deck = service.create_deck({"name": "  Python  ", "description": "Temel kartlar"})
+    deck = service.create_deck({"name": "  Python  ", "description": "Temel kartlar"}, TEST_USER)
 
     assert deck.name == "Python"
 
@@ -86,29 +98,31 @@ def test_create_deck_trims_name(service: DeckService) -> None:
 @pytest.mark.unit
 def test_create_deck_rejects_empty_name(service: DeckService) -> None:
     with pytest.raises(ValidationError):
-        service.create_deck({"name": "   "})
+        service.create_deck({"name": "   "}, TEST_USER)
 
 
 @pytest.mark.unit
 def test_create_deck_rejects_duplicate_name(service: DeckService) -> None:
-    service.create_deck({"name": "Python"})
+    service.create_deck({"name": "Python"}, TEST_USER)
 
     with pytest.raises(ConflictError):
-        service.create_deck({"name": "Python"})
+        service.create_deck({"name": "Python"}, TEST_USER)
 
 
 @pytest.mark.unit
 def test_add_flashcard_requires_existing_deck(service: DeckService) -> None:
     with pytest.raises(NotFoundError):
-        service.add_flashcard(999, {"front": "Soru", "back": "Cevap"})
+        service.add_flashcard(999, {"front": "Soru", "back": "Cevap"}, TEST_USER)
 
 
 @pytest.mark.unit
 def test_review_flashcard_updates_difficulty_and_count(service: DeckService) -> None:
-    deck = service.create_deck({"name": "Python"})
-    flashcard = service.add_flashcard(deck.id, {"front": "Flask nedir?", "back": "Web framework"})
+    deck = service.create_deck({"name": "Python"}, TEST_USER)
+    card_data = {"front": "Flask nedir?", "back": "Web framework"}
+    flashcard = service.add_flashcard(deck.id, card_data, TEST_USER)
+    flashcard.deck = deck
 
-    reviewed = service.review_flashcard(flashcard.id, {"difficulty": "good"})
+    reviewed = service.review_flashcard(flashcard.id, {"difficulty": "good"}, TEST_USER)
 
     assert reviewed.difficulty == "good"
     assert reviewed.review_count == 1
@@ -120,8 +134,9 @@ def test_review_flashcard_rejects_invalid_difficulty(
     service: DeckService,
     difficulty: str,
 ) -> None:
-    deck = service.create_deck({"name": "Python"})
-    flashcard = service.add_flashcard(deck.id, {"front": "Soru", "back": "Cevap"})
+    deck = service.create_deck({"name": "Python"}, TEST_USER)
+    flashcard = service.add_flashcard(deck.id, {"front": "Soru", "back": "Cevap"}, TEST_USER)
+    flashcard.deck = deck
 
     with pytest.raises(ValidationError):
-        service.review_flashcard(flashcard.id, {"difficulty": difficulty})
+        service.review_flashcard(flashcard.id, {"difficulty": difficulty}, TEST_USER)

@@ -6,6 +6,7 @@ from prometheus_flask_exporter import PrometheusMetrics
 from sqlalchemy.exc import OperationalError
 
 from config import Config
+from controllers.auth_controller import auth_bp
 from controllers.deck_controller import deck_bp
 from controllers.view_controller import view_bp
 from extensions import db
@@ -20,6 +21,7 @@ def create_app(config_object: type[Config] | None = None, **config_overrides: ob
     app.config.update(config_overrides)
 
     db.init_app(app)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(deck_bp)
     app.register_blueprint(view_bp)
 

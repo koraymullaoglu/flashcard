@@ -7,14 +7,29 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
+
+    decks = db.relationship(
+        "Deck", back_populates="user", cascade="all, delete-orphan", lazy="dynamic"
+    )
+
+
 class Deck(db.Model):
     __tablename__ = "decks"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False, unique=True)
+    name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.String(255), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
 
+    user = db.relationship("User", back_populates="decks")
     flashcards = db.relationship(
         "Flashcard",
         back_populates="deck",

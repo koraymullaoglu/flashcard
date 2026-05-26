@@ -274,8 +274,11 @@
     const $btnStudy     = document.getElementById('btn-study');
 
     /* ===== API ===== */
+    function on401() { clearToken(); window.location = '/auth'; }
+
     async function apiGet(path) {
-        const res = await fetch(`${API}${path}`);
+        const res = await fetch(`${API}${path}`, { headers: getAuthHeaders() });
+        if (res.status === 401) { on401(); return; }
         if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
         return res.json();
     }
@@ -283,10 +286,11 @@
     async function apiPost(path, body) {
         const res = await fetch(`${API}${path}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(body),
         });
         const data = await res.json();
+        if (res.status === 401) { on401(); return; }
         if (!res.ok) throw new Error(data?.error?.message || `POST ${path} → ${res.status}`);
         return data;
     }
@@ -294,16 +298,21 @@
     async function apiPatch(path, body) {
         const res = await fetch(`${API}${path}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(body),
         });
         const data = await res.json();
+        if (res.status === 401) { on401(); return; }
         if (!res.ok) throw new Error(data?.error?.message || res.status);
         return data;
     }
 
     async function apiDelete(path) {
-        const res = await fetch(`${API}${path}`, { method: 'DELETE' });
+        const res = await fetch(`${API}${path}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+        });
+        if (res.status === 401) { on401(); return; }
         if (!res.ok) throw new Error(`DELETE ${path} → ${res.status}`);
         return res.json();
     }

@@ -67,9 +67,22 @@
                 <span class="font-semibold text-sm tracking-tight">Flashcard</span>
             </a>
             <div class="flex items-center gap-3">
-                <a href="/" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2.5 py-1.5 rounded-md hover:bg-zinc-800/50" data-testid="nav-decks">
-                    Desteler
+                <div class="flex items-center gap-3" data-testid="nav-links">
+                    <a href="/" class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2.5 py-1.5 rounded-md hover:bg-zinc-800/50" data-testid="nav-decks">
+                        Desteler
+                    </a>
+                </div>
+                <div class="flex items-center gap-2" id="auth-controls" data-testid="auth-controls">
+                <a href="/auth" id="nav-login" data-testid="nav-login"
+                   class="text-xs text-zinc-400 hover:text-zinc-200 transition-colors px-2.5 py-1.5 rounded-md hover:bg-zinc-800/50">
+                    Giriş
                 </a>
+                <span id="nav-user" data-testid="nav-user" class="hidden text-xs text-zinc-400 px-2.5 py-1.5"></span>
+                <button id="nav-logout" data-testid="nav-logout" onclick="logout()"
+                    class="hidden text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-2.5 py-1.5 rounded-md hover:bg-zinc-800/50">
+                    Çıkış
+                </button>
+            </div>
             </div>
         </div>
     </nav>
@@ -78,6 +91,49 @@
     <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {% block content %}{% endblock %}
     </main>
+
+    <script>
+        /* ===== Auth Helpers ===== */
+        const AUTH_KEY = 'flashcard_token';
+
+        function getToken() { return localStorage.getItem(AUTH_KEY); }
+        function setToken(t) { localStorage.setItem(AUTH_KEY, t); }
+        function clearToken() { localStorage.removeItem(AUTH_KEY); }
+
+        function authHeaders() {
+            const t = getToken();
+            return t ? { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+        }
+
+        function getAuthHeaders() {
+            const t = getToken();
+            return t ? { 'Authorization': `Bearer ${t}` } : {};
+        }
+
+        function logout() {
+            clearToken();
+            window.location = '/auth';
+        }
+
+        (function updateNav() {
+            const token = getToken();
+            const $login  = document.getElementById('nav-login');
+            const $user   = document.getElementById('nav-user');
+            const $logout = document.getElementById('nav-logout');
+
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const username = payload.usr || payload.sub;
+                    if ($login)  $login.classList.add('hidden');
+                    if ($user)   { $user.textContent = username; $user.classList.remove('hidden'); }
+                    if ($logout) $logout.classList.remove('hidden');
+                } catch (_) {
+                    clearToken();
+                }
+            }
+        })();
+    </script>
 
     {% block scripts %}{% endblock %}
 </body>
