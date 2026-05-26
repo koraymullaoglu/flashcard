@@ -22,7 +22,7 @@ spec:
             - configMapRef:
                 name: flashcard-api-config
             - secretRef:
-                name: flashcard-postgres-secret
+                name: flashcard-api-secret
           command:
             - sh
             - -c

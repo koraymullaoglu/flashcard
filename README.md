@@ -87,59 +87,80 @@ Collection içindeki istekler sırasıyla çalıştırıldığında `deck_id` ve
 
 ## Kubernetes / Minikube
 
-Bu manifestler Flask API'yi ve yerel geliştirme için PostgreSQL'i Minikube ortamına deploy eder. API başlangıçta veritabanı tablolarını `flask --app app init-db` komutu ile oluşturur.
+### Ön koşullar
 
 Minikube başlat:
 
 ```bash
 minikube start
-```
-
-Docker image'ını Minikube Docker ortamında build et:
-
-```bash
 eval $(minikube docker-env)
 docker build -t flashcard-api:dev .
 ```
 
-Kubernetes kaynaklarını uygula:
+Helm repolarını ekle:
 
 ```bash
-kubectl apply -f k8s/postgres-secret.yaml
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+```
+
+### PostgreSQL (Helm)
+
+```bash
+helm install postgres bitnami/postgresql \
+  --set auth.database=flashcard \
+  --set auth.username=flashcard \
+  --set auth.password=flashcard \
+  --set primary.persistence.size=1Gi
+```
+
+### Prometheus + Grafana (Helm)
+
+```bash
+helm install monitoring prometheus-community/kube-prometheus-stack
+```
+
+Prometheus'a eriş:
+
+```bash
+kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090 > /dev/null 2>&1 &
+# http://localhost:9090
+```
+
+Grafana'ya eriş:
+
+```bash
+kubectl port-forward svc/monitoring-grafana 3000:80 > /dev/null 2>&1 &
+# http://localhost:3000  (admin / prom-operator)
+```
+
+Dashboard import: Grafana → Dashboards → Import → `monitoring/grafana-dashboard.json`
+
+### Flask API
+
+```bash
 kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/postgres-pvc.yaml
-kubectl apply -f k8s/postgres-service.yaml
-kubectl apply -f k8s/postgres-deployment.yaml
-kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/app-secret.yaml
 kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/servicemonitor.yaml
 ```
 
-Pod ve Service durumunu kontrol et:
+Durum kontrolü:
 
 ```bash
-kubectl get pods
-kubectl get service postgres
-kubectl get service flashcard-api
-```
-
-Deployment'ların hazır olmasını bekle:
-
-```bash
-kubectl rollout status deployment/postgres
 kubectl rollout status deployment/flashcard-api
-```
-
-API URL'ini al ve health check çalıştır:
-
-```bash
 API_URL=$(minikube service flashcard-api --url)
 curl "$API_URL/health"
+curl "$API_URL/api/decks"
 ```
 
-Veritabanı kullanan endpointleri dene:
+### Temizlik
 
 ```bash
-curl "$API_URL/api/decks"
+helm uninstall postgres monitoring
+kubectl delete -f k8s/
 ```
 
 ## Endpointler
