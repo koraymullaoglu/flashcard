@@ -28,8 +28,22 @@ class DeckService:
             raise NotFoundError("Deck bulunamadi.")
         return deck
 
-    def get_deck(self, deck_id: int, user_id: int) -> Deck:
-        return self._get_owned_deck(deck_id, user_id)
+    def get_deck(self, deck_id: int, user_id: int, due_only: bool = False) -> Deck:
+        deck = self._get_owned_deck(deck_id, user_id)
+        if due_only:
+            now = datetime.now(timezone.utc)
+            due: list[Flashcard] = []
+            for c in deck.flashcards:
+                if c.next_review_at is None:
+                    due.append(c)
+                    continue
+                nra = c.next_review_at
+                if nra.tzinfo is None:
+                    nra = nra.replace(tzinfo=timezone.utc)
+                if nra <= now:
+                    due.append(c)
+            deck.flashcards = due
+        return deck
 
     def create_deck(self, payload: dict[str, object], user_id: int) -> Deck:
         name = self._required_string(payload, "name", max_length=120)
@@ -58,9 +72,27 @@ class DeckService:
             allowed = ", ".join(sorted(ALLOWED_DIFFICULTIES))
             raise ValidationError(f"difficulty su degerlerden biri olmali: {allowed}.")
 
+        now = datetime.now(timezone.utc)
         flashcard.difficulty = difficulty
         flashcard.review_count += 1
-        flashcard.last_reviewed_at = datetime.now(timezone.utc)
+        flashcard.last_reviewed_at = now
+
+        interval = flashcard.interval_days
+        if difficulty == "again":
+            flashcard.interval_days = 0.0
+            flashcard.next_review_at = now
+        else:
+            base = interval if interval > 0 else 1.0
+            if difficulty == "hard":
+                flashcard.interval_days = base * 1.2
+            elif difficulty == "good":
+                flashcard.interval_days = base * 2.5
+            elif difficulty == "easy":
+                flashcard.interval_days = base * 2.5 + 1.0
+            flashcard.next_review_at = datetime.fromtimestamp(
+                now.timestamp() + flashcard.interval_days * 86400, tz=timezone.utc
+            )
+
         return self.flashcard_repository.save(flashcard)
 
     def delete_flashcard(self, flashcard_id: int, user_id: int) -> None:

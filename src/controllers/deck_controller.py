@@ -39,7 +39,8 @@ def create_deck() -> tuple[object, int]:
 @deck_bp.get("/decks/<int:deck_id>")
 @require_auth
 def get_deck(deck_id: int) -> tuple[object, int]:
-    deck = get_service().get_deck(deck_id, g.current_user_id)
+    due_only = request.args.get("due_only", "").lower() == "true"
+    deck = get_service().get_deck(deck_id, g.current_user_id, due_only=due_only)
     return jsonify({"data": deck.to_dict(include_flashcards=True)}), 200
 
 

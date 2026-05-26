@@ -56,6 +56,8 @@
     <div id="stats-bar" data-testid="stats-bar" class="flex items-center gap-4 mb-6 text-xs text-zinc-500">
         <span data-testid="stat-total"><span id="stat-total-val" class="text-zinc-300 font-medium">0</span> kart</span>
         <span class="text-zinc-800">|</span>
+        <span data-testid="stat-due"><span id="stat-due-val" class="text-violet-400 font-medium">0</span> tekrar</span>
+        <span class="text-zinc-800">|</span>
         <span data-testid="stat-new"><span id="stat-new-val" class="text-sky-400 font-medium">0</span> yeni</span>
         <span data-testid="stat-reviewed"><span id="stat-reviewed-val" class="text-amber-400 font-medium">0</span> çalışılmış</span>
     </div>
@@ -261,6 +263,7 @@
 
     /* ===== State ===== */
     let flashcards    = [];
+    let studyCards    = [];
     let studyIndex    = 0;
     let isFlipped     = false;
     let deleteTargetId = null;
@@ -333,15 +336,18 @@
 
         // Stats
         const total = flashcards.length;
+        const now = new Date().toISOString();
+        const dueCount = flashcards.filter(c => !c.next_review_at || c.next_review_at <= now).length;
         const newCount = flashcards.filter(c => c.difficulty === 'new').length;
         const reviewed = total - newCount;
 
         document.getElementById('stat-total-val').textContent = total;
+        document.getElementById('stat-due-val').textContent = dueCount;
         document.getElementById('stat-new-val').textContent = newCount;
         document.getElementById('stat-reviewed-val').textContent = reviewed;
 
         // Study button state
-        $btnStudy.disabled = total === 0;
+        $btnStudy.disabled = dueCount === 0;
 
         if (total === 0) {
             $cardTable.classList.add('hidden');
@@ -369,6 +375,23 @@
         const cls = diffColors[card.difficulty] || diffColors['new'];
         const label = diffLabels[card.difficulty] || card.difficulty;
 
+        let dueInfo = '';
+        if (card.next_review_at) {
+            const dueDate = new Date(card.next_review_at);
+            const now = new Date();
+            if (dueDate > now) {
+                const hours = Math.ceil((dueDate - now) / 3600000);
+                const timeStr = hours < 24
+                    ? `${hours} saat`
+                    : `${Math.ceil(hours / 24)} gün`;
+                dueInfo = `<span class="text-xs text-zinc-600">${timeStr} sonra</span>`;
+            } else {
+                dueInfo = '<span class="text-xs text-violet-400">tekrar zamanı</span>';
+            }
+        } else {
+            dueInfo = '<span class="text-xs text-violet-400">tekrar zamanı</span>';
+        }
+
         return `
         <div data-testid="card-row-${card.id}"
              class="flex items-center gap-4 rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 hover:border-zinc-700 transition-colors animate-fade-in"
@@ -377,6 +400,7 @@
                 <p class="text-sm text-zinc-200 truncate" data-testid="card-front-${card.id}">${escapeHtml(card.front)}</p>
                 <p class="text-xs text-zinc-500 truncate mt-0.5" data-testid="card-back-${card.id}">${escapeHtml(card.back)}</p>
             </div>
+            ${dueInfo}
             <span class="shrink-0 text-xs font-medium px-2 py-0.5 rounded-md border ${cls}" data-testid="card-difficulty-${card.id}">
                 ${label}
             </span>
@@ -460,13 +484,22 @@
     }
 
     /* ===== Study Mode ===== */
-    function startStudy() {
-        if (flashcards.length === 0) return;
+    async function startStudy() {
+        try {
+            const { data } = await apiGet(`/decks/${DECK_ID}?due_only=true`);
+            studyCards = data.flashcards || [];
+        } catch {
+            studyCards = [];
+        }
+
+        if (studyCards.length === 0) return;
         studyIndex = 0;
         isFlipped = false;
         $listView.classList.add('hidden');
         $studyView.classList.remove('hidden');
         document.getElementById('study-complete').classList.add('hidden');
+        document.getElementById('study-card').parentElement.parentElement.classList.remove('hidden');
+        document.querySelector('[data-testid="study-progress"]').classList.remove('hidden');
         showStudyCard();
     }
 
@@ -477,7 +510,7 @@
     }
 
     function showStudyCard() {
-        const card = flashcards[studyIndex];
+        const card = studyCards[studyIndex];
         if (!card) {
             showStudyComplete();
             return;
@@ -490,10 +523,10 @@
         document.getElementById('study-front-text').textContent = card.front;
         document.getElementById('study-back-text').textContent  = card.back;
         document.getElementById('study-current').textContent    = studyIndex + 1;
-        document.getElementById('study-total').textContent      = flashcards.length;
+        document.getElementById('study-total').textContent      = studyCards.length;
 
         // Progress bar
-        const pct = ((studyIndex) / flashcards.length) * 100;
+        const pct = ((studyIndex) / studyCards.length) * 100;
         document.getElementById('study-progress-bar').style.width = `${pct}%`;
 
         // Hide difficulty, show hint
@@ -513,7 +546,7 @@
     }
 
     async function rateDifficulty(difficulty) {
-        const card = flashcards[studyIndex];
+        const card = studyCards[studyIndex];
         if (!card) return;
 
         // Disable buttons during request
@@ -526,7 +559,7 @@
             card.review_count = (card.review_count || 0) + 1;
 
             studyIndex++;
-            if (studyIndex >= flashcards.length) {
+            if (studyIndex >= studyCards.length) {
                 document.getElementById('study-progress-bar').style.width = '100%';
                 setTimeout(showStudyComplete, 300);
             } else {

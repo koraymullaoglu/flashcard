@@ -60,6 +60,8 @@ class Flashcard(db.Model):
     difficulty = db.Column(db.String(20), nullable=False, default="new")
     review_count = db.Column(db.Integer, nullable=False, default=0)
     last_reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    next_review_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    interval_days = db.Column(db.Float, nullable=False, default=0.0)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utc_now)
 
     deck = db.relationship("Deck", back_populates="flashcards")
@@ -75,5 +77,9 @@ class Flashcard(db.Model):
             "last_reviewed_at": self.last_reviewed_at.isoformat()
             if self.last_reviewed_at
             else None,
+            "next_review_at": self.next_review_at.isoformat()
+            if self.next_review_at
+            else None,
+            "interval_days": self.interval_days,
             "created_at": self.created_at.isoformat(),
         }

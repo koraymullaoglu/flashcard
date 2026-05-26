@@ -37,6 +37,43 @@ def test_create_and_get_deck_with_flashcard(client: FlaskClient) -> None:
     assert get_response.status_code == 200
     assert len(get_response.get_json()["data"]["flashcards"]) == 1
 
+    fc = get_response.get_json()["data"]["flashcards"][0]
+    assert "next_review_at" in fc
+    assert "interval_days" in fc
+    assert fc["interval_days"] == 0.0
+
+
+@pytest.mark.integration
+def test_get_deck_due_only_filters_due_cards(client: FlaskClient) -> None:
+    headers = _auth_headers(client)
+    deck_payload = DeckFactory.build()
+    create_resp = client.post(
+        "/api/decks",
+        json={"name": deck_payload.name, "description": deck_payload.description},
+        headers=headers,
+    )
+    deck_id = create_resp.get_json()["data"]["id"]
+
+    client.post(
+        f"/api/decks/{deck_id}/flashcards",
+        json={"front": "Yeni kart", "back": "Cevap"},
+        headers=headers,
+    )
+
+    # New cards have next_review_at=None, so they appear in due_only
+    due_resp = client.get(f"/api/decks/{deck_id}?due_only=true", headers=headers)
+    assert due_resp.status_code == 200
+    assert len(due_resp.get_json()["data"]["flashcards"]) == 1
+
+    # After marking as "again", card is still due (next_review_at = now)
+    client.patch(
+        f"/api/flashcards/{due_resp.get_json()['data']['flashcards'][0]['id']}/review",
+        json={"difficulty": "again"},
+        headers=headers,
+    )
+    due_resp2 = client.get(f"/api/decks/{deck_id}?due_only=true", headers=headers)
+    assert len(due_resp2.get_json()["data"]["flashcards"]) == 1
+
 
 @pytest.mark.integration
 def test_duplicate_deck_name_returns_409(client: FlaskClient) -> None:

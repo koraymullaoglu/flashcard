@@ -24,6 +24,8 @@ class FakeFlashcard:
     difficulty: str = "new"
     review_count: int = 0
     last_reviewed_at: object = None
+    next_review_at: object = None
+    interval_days: float = 0.0
     deck: FakeDeck | None = None
 
 
@@ -126,6 +128,48 @@ def test_review_flashcard_updates_difficulty_and_count(service: DeckService) -> 
 
     assert reviewed.difficulty == "good"
     assert reviewed.review_count == 1
+    assert reviewed.last_reviewed_at is not None
+    assert reviewed.next_review_at is not None
+    assert reviewed.interval_days == 2.5
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    "difficulty, expected_interval",
+    [
+        ("again", 0.0),
+        ("hard", 1.2),
+        ("good", 2.5),
+        ("easy", 3.5),
+    ],
+)
+def test_review_flashcard_sm2_intervals(
+    service: DeckService, difficulty: str, expected_interval: float
+) -> None:
+    deck = service.create_deck({"name": "SM2"}, TEST_USER)
+    flashcard = service.add_flashcard(deck.id, {"front": "S", "back": "C"}, TEST_USER)
+    flashcard.deck = deck
+
+    reviewed = service.review_flashcard(flashcard.id, {"difficulty": difficulty}, TEST_USER)
+
+    assert reviewed.interval_days == expected_interval
+    if difficulty == "again":
+        assert reviewed.next_review_at is not None
+    else:
+        assert reviewed.next_review_at is not None
+
+
+@pytest.mark.unit
+def test_review_flashcard_builds_on_existing_interval(service: DeckService) -> None:
+    deck = service.create_deck({"name": "Build"}, TEST_USER)
+    flashcard = service.add_flashcard(deck.id, {"front": "S", "back": "C"}, TEST_USER)
+    flashcard.deck = deck
+
+    first = service.review_flashcard(flashcard.id, {"difficulty": "good"}, TEST_USER)
+    assert first.interval_days == 2.5
+
+    second = service.review_flashcard(flashcard.id, {"difficulty": "good"}, TEST_USER)
+    assert second.interval_days == 2.5 * 2.5
 
 
 @pytest.mark.unit

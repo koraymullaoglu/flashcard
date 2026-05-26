@@ -187,7 +187,7 @@ kubectl delete -f k8s/
 | `POST /api/auth/login` | Giriş (JWT token döner) |
 | `POST /api/decks` | Yeni deste oluştur |
 | `GET /api/decks` | Tüm desteleri listele |
-| `GET /api/decks/<deck_id>` | Deste detayı (kartlarla birlikte) |
+| `GET /api/decks/<deck_id>` | Deste detayı (kartlarla birlikte). `?due_only=true` ile sadece tekrarı gelen kartlar |
 | `POST /api/decks/<deck_id>/flashcards` | Desteye kart ekle |
 | `PATCH /api/flashcards/<flashcard_id>/review` | Kartı değerlendir |
 | `DELETE /api/flashcards/<flashcard_id>` | Kartı sil |
@@ -211,6 +211,7 @@ src/templates/
 
 - **Koyu tema** — zinc-950 tabanlı, göz yormayan tasarım
 - **Kart çevirme animasyonu** — CSS 3D transform ile çalışma deneyimi
+- **SM-2 aralıklı tekrar** — Zorluk derecelendirmesine göre otomatik tekrar planlaması (again/hard/good/easy)
 - **Zorluk derecelendirme** — Tekrar / Zor / İyi / Kolay
 - **Responsive** — mobil ve masaüstü uyumlu
 - **Playwright uyumlu** — tüm interaktif elementlerde `data-testid`
