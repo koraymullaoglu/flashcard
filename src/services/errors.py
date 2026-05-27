@@ -20,3 +20,8 @@ class ConflictError(ServiceError):
 class ValidationError(ServiceError):
     status_code = 422
     code = "validation_error"
+
+
+class ExternalServiceError(ServiceError):
+    status_code = 502
+    code = "external_service_error"

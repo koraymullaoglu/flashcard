@@ -18,10 +18,10 @@ cp .env.example .env
 
 Bu projede `pyenv` kullanılmaz. Python sürümünü, `.venv` ortamını, dependency kurulumunu ve komut çalıştırmayı `uv` yönetir.
 
-PostgreSQL'i başlat:
+PostgreSQL ve LocalStack'i başlat:
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres localstack
 ```
 
 Tabloları oluştur:
@@ -62,6 +62,12 @@ Docker ile gerçek PostgreSQL Testcontainers testi de çalışsın istersen:
 
 ```bash
 RUN_TESTCONTAINERS=true uv run pytest tests/integration
+```
+
+LocalStack ile S3 export entegrasyon testini çalıştır:
+
+```bash
+RUN_LOCALSTACK_TESTS=true uv run pytest tests/integration/test_s3_export.py
 ```
 
 Sadece e2e test:
@@ -189,10 +195,32 @@ kubectl delete -f k8s/
 | `GET /api/decks` | Tüm desteleri listele |
 | `GET /api/decks/<deck_id>` | Deste detayı (kartlarla birlikte). `?due_only=true` ile sadece tekrarı gelen kartlar |
 | `POST /api/decks/<deck_id>/flashcards` | Desteye kart ekle |
+| `POST /api/decks/<deck_id>/export` | Deste ve kartlarini JSON olarak S3 bucket'ina export et |
 | `PATCH /api/flashcards/<flashcard_id>/review` | Kartı değerlendir |
 | `DELETE /api/flashcards/<flashcard_id>` | Kartı sil |
 
-Tüm `/api/*` endpoint'leri (health hariç) `Authorization: Bearer <token>` header'ı gerektirir. |
+Tüm `/api/*` endpoint'leri (health hariç) `Authorization: Bearer <token>` header'ı gerektirir.
+
+## S3 Export
+
+Uygulama deck ve flashcard snapshot'larini JSON olarak S3'e export edebilir. Docker Compose ile gelen LocalStack servisi sayesinde bunu AWS hesabina gerek olmadan lokal ortamda deneyebilirsin.
+
+Varsayilan ayarlar:
+
+- `S3_BUCKET_NAME=flashcard-exports`
+- `S3_REGION=us-east-1`
+- `S3_ENDPOINT_URL=http://localstack:4566`
+- `S3_EXPORT_PREFIX=exports`
+
+Ornek export istegi:
+
+```bash
+curl -X POST \
+  http://127.0.0.1:5000/api/decks/1/export \
+  -H "Authorization: Bearer <token>"
+```
+
+Basarili response `bucket`, `key` ve `s3_uri` doner. Obje iceriginde export zamani, `user_id`, deck bilgisi ve tum flashcard'lar bulunur.
 
 ## Frontend
 

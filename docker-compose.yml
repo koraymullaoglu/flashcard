@@ -8,11 +8,18 @@ services:
       DATABASE_URL: postgresql+psycopg://flashcard:flashcard@postgres:5432/flashcard
       SECRET_KEY: compose-secret-key-change-in-production
       JWT_SECRET: compose-jwt-secret-at-least-32-bytes-long
+      S3_BUCKET_NAME: flashcard-exports
+      S3_REGION: us-east-1
+      S3_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
     ports:
       - "5000:5000"
     depends_on:
       postgres:
         condition: service_healthy
+      localstack:
+        condition: service_started
     command: sh -c "flask --app app init-db && flask --app app run --host=0.0.0.0 --port=5000"
 
   postgres:
@@ -53,7 +60,19 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
 
+  localstack:
+    image: localstack/localstack:3.8.1
+    environment:
+      SERVICES: s3
+      AWS_DEFAULT_REGION: us-east-1
+      DEBUG: "0"
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  localstack_data:

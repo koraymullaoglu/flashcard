@@ -4,6 +4,7 @@ import pytest
 
 from services.deck_service import DeckService
 from services.errors import ConflictError, NotFoundError, ValidationError
+from services.s3_service import S3ExportResult
 
 
 @dataclass
@@ -78,6 +79,17 @@ class FakeFlashcardRepository:
 
     def delete(self, flashcard: FakeFlashcard) -> None:
         del self.flashcards[flashcard.id]
+
+
+class FakeS3Service:
+    def __init__(self) -> None:
+        self.exported_deck: FakeDeck | None = None
+        self.exported_user_id: int | None = None
+
+    def export_deck(self, deck: FakeDeck, user_id: int) -> S3ExportResult:
+        self.exported_deck = deck
+        self.exported_user_id = user_id
+        return S3ExportResult(bucket="flashcard-exports", key="exports/test.json", etag="etag-1")
 
 
 TEST_USER = 1
@@ -184,3 +196,16 @@ def test_review_flashcard_rejects_invalid_difficulty(
 
     with pytest.raises(ValidationError):
         service.review_flashcard(flashcard.id, {"difficulty": difficulty}, TEST_USER)
+
+
+@pytest.mark.unit
+def test_export_deck_to_s3_checks_ownership_and_returns_result(service: DeckService) -> None:
+    deck = service.create_deck({"name": "Export"}, TEST_USER)
+    s3_service = FakeS3Service()
+
+    result = service.export_deck_to_s3(deck.id, TEST_USER, s3_service)
+
+    assert s3_service.exported_deck == deck
+    assert s3_service.exported_user_id == TEST_USER
+    assert result.bucket == "flashcard-exports"
+    assert result.key == "exports/test.json"

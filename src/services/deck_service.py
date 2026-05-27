@@ -4,6 +4,7 @@ from models import Deck, Flashcard
 from repositories.deck_repository import DeckRepository
 from repositories.flashcard_repository import FlashcardRepository
 from services.errors import ConflictError, NotFoundError, ValidationError
+from services.s3_service import S3ExportResult, S3Service
 
 ALLOWED_DIFFICULTIES = {"again", "hard", "good", "easy"}
 
@@ -100,6 +101,15 @@ class DeckService:
         if flashcard is None or flashcard.deck.user_id != user_id:
             raise NotFoundError("Flashcard bulunamadi.")
         self.flashcard_repository.delete(flashcard)
+
+    def export_deck_to_s3(
+        self,
+        deck_id: int,
+        user_id: int,
+        s3_service: S3Service,
+    ) -> S3ExportResult:
+        deck = self._get_owned_deck(deck_id, user_id)
+        return s3_service.export_deck(deck, user_id)
 
     @staticmethod
     def _required_string(payload: dict[str, object], field: str, max_length: int) -> str:
