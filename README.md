@@ -58,11 +58,13 @@ Sadece integration test:
 uv run pytest tests/integration
 ```
 
-Docker ile gerçek PostgreSQL Testcontainers testi de çalışsın istersen:
+Docker ile gerçek PostgreSQL Testcontainers testlerini çalıştırmak istersen:
 
 ```bash
 RUN_TESTCONTAINERS=true uv run pytest tests/integration
 ```
+
+Bu testler varsayılan koşuda kapalıdır; böylece normal `uv run pytest` ve `uv run pytest tests/integration` akışları hızlı kalır. `RUN_TESTCONTAINERS=true` verdiğinde `tests/integration/test_postgres_container.py` içindeki gerçek PostgreSQL senaryoları da çalışır.
 
 LocalStack ile S3 export entegrasyon testini çalıştır:
 
