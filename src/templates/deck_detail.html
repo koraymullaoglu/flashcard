@@ -46,6 +46,20 @@
                 </svg>
                 Kart Ekle
             </button>
+            <button
+                id="btn-export"
+                data-testid="btn-export"
+                onclick="exportDeck()"
+                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-lg
+                       bg-amber-950/40 border border-amber-900/40 text-amber-300 hover:bg-amber-900/40 transition-colors
+                       disabled:opacity-40 disabled:cursor-not-allowed
+                       focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
+            >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+                Export
+            </button>
         </div>
     </div>
 </header>
@@ -251,6 +265,21 @@
                 </button>
             </div>
         </div>
+    </div>
+</div>
+<!-- Toast notification -->
+<div id="toast" data-testid="toast" class="hidden fixed bottom-6 right-6 z-[60] max-w-sm rounded-lg border p-4 shadow-lg animate-slide-up" role="alert">
+    <div class="flex items-start gap-3">
+        <span id="toast-icon" class="shrink-0 mt-0.5"></span>
+        <div>
+            <p id="toast-title" class="text-sm font-medium"></p>
+            <p id="toast-detail" class="text-xs mt-1 opacity-80"></p>
+        </div>
+        <button onclick="dismissToast()" class="shrink-0 text-zinc-500 hover:text-zinc-300 transition-colors p-0.5 -m-1">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+            </svg>
+        </button>
     </div>
 </div>
 {% endblock %}
@@ -503,10 +532,10 @@
         showStudyCard();
     }
 
-    function exitStudy() {
+    async function exitStudy() {
         $studyView.classList.add('hidden');
         $listView.classList.remove('hidden');
-        loadCards();
+        await loadCards();
     }
 
     function showStudyCard() {
@@ -577,6 +606,52 @@
         document.querySelector('[data-testid="study-progress"]').classList.add('hidden');
         document.getElementById('study-complete').classList.remove('hidden');
         document.getElementById('study-complete').classList.add('flex');
+    }
+
+    /* ===== Export ===== */
+    async function exportDeck() {
+        const btn = document.getElementById('btn-export');
+        btn.disabled = true;
+
+        try {
+            const data = await apiPost(`/decks/${DECK_ID}/export`, {});
+            showToast('success', 'Export başarılı', data.data.s3_uri);
+        } catch (err) {
+            showToast('error', 'Export başarısız', err.message);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    let _toastTimer = null;
+
+    function showToast(type, title, detail) {
+        const $toast = document.getElementById('toast');
+        const $icon = document.getElementById('toast-icon');
+        const $title = document.getElementById('toast-title');
+        const $detail = document.getElementById('toast-detail');
+
+        clearTimeout(_toastTimer);
+
+        if (type === 'success') {
+            $toast.className = $toast.className.replace(/border-\w+-\d+\/40|bg-\w+-\d+/g, '');
+            $toast.classList.add('border-emerald-800/60', 'bg-emerald-950/80');
+            $icon.innerHTML = '<svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>';
+        } else {
+            $toast.className = $toast.className.replace(/border-\w+-\d+\/40|bg-\w+-\d+/g, '');
+            $toast.classList.add('border-red-800/60', 'bg-red-950/80');
+            $icon.innerHTML = '<svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>';
+        }
+
+        $title.textContent = title;
+        $detail.textContent = detail;
+        $toast.classList.remove('hidden');
+        _toastTimer = setTimeout(dismissToast, 6000);
+    }
+
+    function dismissToast() {
+        clearTimeout(_toastTimer);
+        document.getElementById('toast').classList.add('hidden');
     }
 
     /* ===== Keyboard ===== */

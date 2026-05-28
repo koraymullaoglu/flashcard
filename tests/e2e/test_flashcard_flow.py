@@ -1,49 +1,7 @@
-from collections.abc import Iterator
-from threading import Thread
-from uuid import uuid4
-
 import pytest
 import requests
-from flask import Flask
+from tests.e2e.conftest import REQUEST_TIMEOUT_SECONDS, _auth_session
 from tests.factories import DeckFactory, FlashcardFactory
-from werkzeug.serving import make_server
-
-REQUEST_TIMEOUT_SECONDS = 5
-
-
-@pytest.fixture()
-def live_server(app: Flask) -> Iterator[str]:
-    server = make_server("127.0.0.1", 0, app)
-    thread = Thread(target=server.serve_forever)
-    thread.daemon = True
-    thread.start()
-
-    yield f"http://127.0.0.1:{server.server_port}"
-
-    server.shutdown()
-    thread.join(timeout=5)
-
-
-def _auth_session(live_server: str) -> tuple[requests.Session, dict[str, str]]:
-    session = requests.Session()
-    username = f"e2e-{uuid4().hex[:8]}"
-    auth_payload = {"username": username, "password": "e2e-password"}
-
-    register_response = session.post(
-        f"{live_server}/api/auth/register",
-        json=auth_payload,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
-    login_response = session.post(
-        f"{live_server}/api/auth/login",
-        json=auth_payload,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
-    token = login_response.json()["data"]["token"]
-
-    assert register_response.status_code == 201
-    assert login_response.status_code == 200
-    return session, {"Authorization": f"Bearer {token}"}
 
 
 def _create_deck(

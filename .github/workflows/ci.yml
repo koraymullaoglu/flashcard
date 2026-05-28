@@ -29,7 +29,36 @@ jobs:
         run: uv run ruff check .
 
       - name: Run tests
-        run: uv run pytest -q
+        run: uv run pytest -q -m "not browser"
+
+  browser-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Install Playwright Chromium
+        run: uv run playwright install chromium --with-deps
+
+      - name: Run browser tests
+        run: uv run pytest tests/e2e/ -m browser -v --browser chromium
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-screenshots
+          path: test-results/
 
   postman:
     runs-on: ubuntu-latest
@@ -95,7 +124,7 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    needs: [test, postman]
+    needs: [test, browser-tests, postman]
 
     steps:
       - name: Checkout repo

@@ -22,6 +22,7 @@ dependencies = [
 dev = [
     "factory-boy>=3.3.0",
     "Faker>=24.0.0",
+    "pytest-playwright>=0.7.0",
     "pytest>=8.0.0",
     "pytest-cov>=5.0.0",
     "requests>=2.31.0",
@@ -36,6 +37,7 @@ markers = [
     "unit: servis katmani unit testleri",
     "integration: Flask ve veritabani entegrasyon testleri",
     "e2e: HTTP uzerinden uctan uca testler",
+    "browser: Playwright tarayici tabanli e2e testleri",
 ]
 
 [tool.ruff]

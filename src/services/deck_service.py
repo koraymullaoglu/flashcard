@@ -112,23 +112,27 @@ class DeckService:
         return s3_service.export_deck(deck, user_id)
 
     @staticmethod
-    def _required_string(payload: dict[str, object], field: str, max_length: int) -> str:
-        value = payload.get(field)
-        if not isinstance(value, str) or not value.strip():
-            raise ValidationError(f"{field} zorunlu ve bos olmayan bir string olmali.")
-        value = value.strip()
-        if len(value) > max_length:
-            raise ValidationError(f"{field} en fazla {max_length} karakter olabilir.")
-        return value
-
-    @staticmethod
-    def _optional_string(payload: dict[str, object], field: str, max_length: int) -> str | None:
+    def _coerce_string(payload: dict[str, object], field: str, max_length: int) -> str | None:
+        """Return stripped non-empty string, or None. Raises on type/length violations."""
         value = payload.get(field)
         if value is None:
             return None
         if not isinstance(value, str):
             raise ValidationError(f"{field} string olmali.")
         value = value.strip()
+        if not value:
+            return None
         if len(value) > max_length:
             raise ValidationError(f"{field} en fazla {max_length} karakter olabilir.")
-        return value or None
+        return value
+
+    @staticmethod
+    def _required_string(payload: dict[str, object], field: str, max_length: int) -> str:
+        value = DeckService._coerce_string(payload, field, max_length)
+        if value is None:
+            raise ValidationError(f"{field} zorunlu ve bos olmayan bir string olmali.")
+        return value
+
+    @staticmethod
+    def _optional_string(payload: dict[str, object], field: str, max_length: int) -> str | None:
+        return DeckService._coerce_string(payload, field, max_length)
