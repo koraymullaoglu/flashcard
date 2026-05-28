@@ -72,11 +72,40 @@ LocalStack ile S3 export entegrasyon testini çalıştır:
 RUN_LOCALSTACK_TESTS=true uv run pytest tests/integration/test_s3_export.py
 ```
 
-Sadece e2e test:
+Sadece e2e test (HTTP seviyesi):
 
 ```bash
 uv run pytest tests/e2e
 ```
+
+### Tarayici (Browser) E2E Testleri
+
+Playwright ile gercek tarayicida UI testleri. Ilk kez calistirmadan once tarayici binary'lerini yukle:
+
+```bash
+uv run playwright install chromium
+```
+
+Tarayici testlerini calistir:
+
+```bash
+uv run pytest tests/e2e/ -m browser -v
+```
+
+Tarayiciyi gorsel olarak izleyerek debug etmek icin:
+
+```bash
+uv run pytest tests/e2e/ -m browser -v --headed
+```
+
+Bu testler `@pytest.mark.browser` marker'ini kullanir; `-m browser` filtresiyle sadece tarayici testleri calisir. Projede 4 tarayici test dosyasi bulunur:
+
+| Dosya | Kapsam |
+|---|---|
+| `tests/e2e/test_auth_ui.py` | Giris/kayit sayfasi, tab gecisi, hata durumlari, logout, redirect |
+| `tests/e2e/test_deck_list_ui.py` | Deste listesi, bos durum, modal ile deste olusturma, navigasyon |
+| `tests/e2e/test_deck_detail_ui.py` | Deste detayi, kart listesi, kart ekleme/silme modal'lari, istatistikler |
+| `tests/e2e/test_study_mode_ui.py` | Calisma modu, kart cevirme, zorluk derecelendirme, ilerleme, tamamlanma |
 
 Lint kontrolü:
 
@@ -187,6 +216,53 @@ helm uninstall postgres monitoring
 kubectl delete -f k8s/
 ```
 
+## S3 Export
+
+Uygulama deck ve flashcard snapshot'larini JSON olarak S3'e export edebilir. Docker Compose ile gelen LocalStack servisi sayesinde bunu AWS hesabina gerek olmadan lokal ortamda deneyebilirsin.
+
+Varsayilan ayarlar:
+
+- `S3_BUCKET_NAME=flashcard-exports`
+- `S3_REGION=us-east-1`
+- `S3_ENDPOINT_URL=http://localstack:4566`
+- `S3_EXPORT_PREFIX=exports`
+
+Ornek export istegi:
+
+```bash
+curl -X POST \
+  http://127.0.0.1:5000/api/decks/1/export \
+  -H "Authorization: Bearer <token>"
+```
+
+Basarili response `bucket`, `key` ve `s3_uri` doner. Obje iceriginde export zamani, `user_id`, deck bilgisi ve tum flashcard'lar bulunur.
+
+### LocalStack Komutlari
+
+LocalStack S3 bucket ve objelerini `aws` CLI ile sorgulayabilirsin. `--endpoint-url` parametresiyle istekleri LocalStack'e yonlendir:
+
+```bash
+# LocalStack'in ayakta oldugunu ve hangi servislerin calistigini kontrol et
+curl -s http://localhost:4566/_localstack/health | python3 -m json.tool
+
+# S3 bucket'lari listele
+aws --endpoint-url=http://localhost:4566 s3 ls
+
+# Yeni bucket olustur (gerekirse)
+aws --endpoint-url=http://localhost:4566 s3 mb s3://flashcard-exports
+
+# Bucket icindeki objeleri listele
+aws --endpoint-url=http://localhost:4566 s3 ls s3://flashcard-exports/ --recursive
+
+# Export edilen objenin icerigini goruntule
+aws --endpoint-url=http://localhost:4566 s3 cp s3://flashcard-exports/exports/user-1/deck-1-20250101T000000Z.json -
+
+# LocalStack container loglarini takip et
+docker compose logs -f localstack
+```
+
+Docker Compose ile gelen LocalStack sadece `s3` servisini acar (`SERVICES: s3`). Baska servislere ihtiyac duyarsan `docker-compose.yml` icindeki `SERVICES` ortam degiskenini guncellemen yeterli.
+
 ## Endpointler
 
 ### Sayfa (HTML)
@@ -212,27 +288,6 @@ kubectl delete -f k8s/
 | `DELETE /api/flashcards/<flashcard_id>` | Kartı sil |
 
 Tüm `/api/*` endpoint'leri (health hariç) `Authorization: Bearer <token>` header'ı gerektirir.
-
-## S3 Export
-
-Uygulama deck ve flashcard snapshot'larini JSON olarak S3'e export edebilir. Docker Compose ile gelen LocalStack servisi sayesinde bunu AWS hesabina gerek olmadan lokal ortamda deneyebilirsin.
-
-Varsayilan ayarlar:
-
-- `S3_BUCKET_NAME=flashcard-exports`
-- `S3_REGION=us-east-1`
-- `S3_ENDPOINT_URL=http://localstack:4566`
-- `S3_EXPORT_PREFIX=exports`
-
-Ornek export istegi:
-
-```bash
-curl -X POST \
-  http://127.0.0.1:5000/api/decks/1/export \
-  -H "Authorization: Bearer <token>"
-```
-
-Basarili response `bucket`, `key` ve `s3_uri` doner. Obje iceriginde export zamani, `user_id`, deck bilgisi ve tum flashcard'lar bulunur.
 
 ## Frontend
 
