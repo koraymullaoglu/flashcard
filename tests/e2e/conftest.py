@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from pathlib import Path
 from threading import Thread
 from uuid import uuid4
 
@@ -8,6 +9,31 @@ from flask import Flask
 from werkzeug.serving import make_server
 
 REQUEST_TIMEOUT_SECONDS = 5
+
+
+def _has_playwright_browser() -> bool:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return False
+
+    with sync_playwright() as playwright:
+        return Path(playwright.chromium.executable_path).exists()
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    if _has_playwright_browser():
+        return
+
+    skip_browser = pytest.mark.skip(
+        reason=(
+            "Playwright browser binary yok. "
+            "Calistirmak icin `uv run playwright install chromium` kullan."
+        )
+    )
+    for item in items:
+        if "browser" in item.keywords:
+            item.add_marker(skip_browser)
 
 
 @pytest.fixture()

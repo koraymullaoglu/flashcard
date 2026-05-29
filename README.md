@@ -46,6 +46,14 @@ Tüm testleri çalıştır:
 uv run pytest
 ```
 
+Coverage raporunu minimum `%70` eşik zorlamasıyla görmek için:
+
+```bash
+uv run pytest --cov-report=term-missing
+```
+
+Bu projede coverage `%70` altına düşerse `uv run pytest` komutu başarısız olur.
+
 Sadece unit test:
 
 ```bash
